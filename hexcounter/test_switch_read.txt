@@ -1,0 +1,46 @@
+Test: Read Switches and Display Value
+======================================
+This program continuously reads the input switches
+and displays their value. Use this to verify INP 4
+is working correctly before debugging the hex counter.
+
+ADDR  CODE  INSTRUCTION     DESCRIPTION
+----  ----  -----------     -----------
+00    90    GHI R0          D = 0 (R0.1 is 0 after reset)
+01    B2    PHI R2          R2.1 = 0
+02    F8    LDI 30
+03    30                    D = 0x30
+04    A2    PLO R2          R2 = 0030 (scratch pointer)
+05    E2    SEX R2          X = 2 (R2 is data pointer)
+06    6C    INP 4           Read switches into D and M[R2]
+07    64    OUT 4           Display switch value
+08    22    DEC R2          Fix R2 (OUT incremented it)
+09    30    BR 06           Loop back to read switches
+0A    06
+
+; --- HEX DUMP (11 bytes) ---
+90 B2 F8 30 A2 E2 6C 64 22 30 06
+
+; --- BYTE-PER-LINE ---
+90
+B2
+F8
+30
+A2
+E2
+6C
+64
+22
+30
+06
+
+EXPECTED BEHAVIOR:
+- Display should show the hex value of the switch positions
+- Flipping switches should change the display immediately
+- All switches DOWN = 00
+- All switches UP = FF
+- Switch 7 only UP = 80
+- Switch 0 only UP = 01
+
+If display shows 00 regardless of switch positions,
+there may be a hardware or timing issue with the switch input circuit.

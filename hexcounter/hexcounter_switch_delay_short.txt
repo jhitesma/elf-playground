@@ -1,0 +1,80 @@
+Hex Counter with Switch-Controlled Delay (Optimized)
+=====================================================
+Shorter version - 30 bytes vs original 31 bytes.
+Set switches to FF for slowest, 01 for fastest.
+
+ADDR  CODE  INSTRUCTION     DESCRIPTION
+----  ----  -----------     -----------
+00    64    OUT 4           Output D to hex display
+01    00    IDL             Idle
+
+; --- INITIALIZATION ---
+02    90    GHI R0          D = 0 (after reset)
+03    B2    PHI R2          R2.1 = 0
+04    B3    PHI R3          R3.1 = 0 (counter high)
+05    A3    PLO R3          R3.0 = 0 (counter low, R3=0000)
+06    F8    LDI 30
+07    30                    D = 0x30
+08    A2    PLO R2          R2 = 0030 (scratch RAM pointer)
+09    52    STR R2          M[0030] = 0x30
+0A    E2    SEX R2          X = 2 (R2 is data pointer)
+
+; --- MAIN LOOP ---
+0B    30    BR 16           Branch to delay
+0C    16
+
+; --- COUNTER UPDATE (return from delay) ---
+0D    13    INC R3          Increment counter
+0E    83    GLO R3          D = counter low byte
+0F    52    STR R2          Store for display
+10    64    OUT 4           Display counter
+11    22    DEC R2          Fix R2 (OUT incremented it)
+12    C4    NOP
+13    C4    NOP
+14    30    BR 0B           Loop back to delay
+15    0B
+
+; --- DELAY SUBROUTINE ---
+16    6C    INP 4           Read switches into D
+17    B4    PHI R4          R4.1 = switch value (delay amount)
+18    32    BZ 0D           If D=0, skip delay
+19    0D
+1A    94    GHI R4          D = R4.1
+1B    24    DEC R4          Decrement R4
+1C    30    BR 18           Loop until R4.1 = 0
+1D    18
+
+; --- HEX DUMP (30 bytes) ---
+64 00 90 B2 B3 A3 F8 30 A2 52 E2 30 16 13 83 52 64 22 C4 C4 30 0B 6C B4 32 0D 94 24 30 18
+
+; --- BYTE-PER-LINE (for manual entry) ---
+64
+00
+90
+B2
+B3
+A3
+F8
+30
+A2
+52
+E2
+30
+16
+13
+83
+52
+64
+22
+C4
+C4
+30
+0B
+6C
+B4
+32
+0D
+94
+24
+30
+18

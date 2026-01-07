@@ -1,0 +1,53 @@
+# COSMAC ELF Programs
+
+Machine code programs for the [COSMAC ELF](https://en.wikipedia.org/wiki/COSMAC_ELF), a simple single-board computer from 1976 based on the RCA CDP1802 processor.
+
+## Programs
+
+### [Hex Counter](hexcounter/)
+
+A hex counter that displays 00-FF on the display with adjustable delay. Includes multiple versions from 20-31 bytes, with both fixed and switch-controlled delay options. See the [detailed explanation](hexcounter/hexcounter_explained.md) for a line-by-line walkthrough.
+
+### Future Ideas
+
+See [`plans/program-ideas.md`](plans/program-ideas.md) for planned programs including reaction timer, binary trainer, Simon memory game, and more.
+
+## Loading Programs
+
+Programs are entered via the ELF's toggle switches in LOAD mode:
+
+1. Set the memory protect switch to LOAD
+2. For each byte:
+   - Set the 8 toggle switches to the byte value
+   - Press INPUT to store and advance
+3. Set memory protect to RUN
+4. Press RUN to start execution
+
+## Hardware
+
+The COSMAC ELF has minimal I/O:
+- 8 toggle switches (binary input, readable as 0x00-0xFF)
+- INPUT pushbutton
+- 2-digit hex display
+- Q LED
+
+## Reference Documentation
+
+The `reference docs/` folder contains:
+- **CDP1802 datasheet** - Complete processor documentation
+- **COSMAC ELF Manual** - Original construction and programming guide
+- **ELF Schematic** - Circuit diagram
+
+## Credits
+
+Special thanks to **Paul Schmidt** for documenting a modern build of the COSMAC ELF:
+- [Build details and documentation (PDF)](http://cosmacelf.com/publications/books/cosmac_elf_build_details.zip)
+- [YouTube: COSMAC ELF Build Part 1](https://www.youtube.com/watch?v=MHYn_NBKsfU)
+- [YouTube: COSMAC ELF Build Part 2](https://www.youtube.com/watch?v=MXX7FeYH1N8)
+
+## Resources
+
+- [cosmacelf.com](http://cosmacelf.com/) - COSMAC ELF resource site with documentation, programs, and more
+- [COSMAC ELF Group](https://groups.io/g/cosmacelf) - Active mailing list for ELF enthusiasts
+- [COSMAC ELF on Wikipedia](https://en.wikipedia.org/wiki/COSMAC_ELF)
+- [CDP1802 on Wikipedia](https://en.wikipedia.org/wiki/RCA_1802)

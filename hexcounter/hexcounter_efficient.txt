@@ -1,0 +1,77 @@
+Hex Counter - Efficient Version (22 bytes)
+==========================================
+Optimized version: 22 bytes vs original 31 bytes.
+Savings: removed preamble, NOPs, restructured delay loop.
+
+ADDR  CODE  INSTRUCTION     DESCRIPTION
+----  ----  -----------     -----------
+; --- INITIALIZATION (8 bytes) ---
+00    90    GHI R0          D = 0 (R0.1 is 0 after reset)
+01    B3    PHI R3          R3.1 = 0
+02    A3    PLO R3          R3.0 = 0 (R3 = 0000, counter)
+03    B2    PHI R2          R2.1 = 0
+04    F8    LDI 30
+05    30                    D = 0x30
+06    A2    PLO R2          R2 = 0030 (scratch pointer)
+07    E2    SEX R2          X = 2
+
+; --- MAIN LOOP (5 bytes) ---
+08    83    GLO R3          D = counter low byte
+09    52    STR R2          M[0030] = counter
+0A    64    OUT 4           Display, R2 -> 0031
+0B    22    DEC R2          R2 -> 0030
+0C    13    INC R3          counter++
+
+; --- DELAY (9 bytes) ---
+0D    F8    LDI xx          Load delay value
+0E    5F                    ** DELAY VALUE: change 5F for speed **
+0F    B4    PHI R4          R4.1 = delay
+10    24    DEC R4          R4--
+11    94    GHI R4          D = R4.1
+12    3A    BNZ 10          Loop while D != 0
+13    10
+14    30    BR 08           Back to main loop
+15    08
+
+; --- HEX DUMP (22 bytes) ---
+90 B3 A3 B2 F8 30 A2 E2 83 52 64 22 13 F8 5F B4 24 94 3A 10 30 08
+
+; --- BYTE-PER-LINE ---
+90
+B3
+A3
+B2
+F8
+30
+A2
+E2
+83
+52
+64
+22
+13
+F8
+5F
+B4
+24
+94
+3A
+10
+30
+08
+
+OPTIMIZATIONS MADE:
+1. Removed mysterious preamble (64 00) - saves 2 bytes
+2. Removed unnecessary NOPs - saves 2 bytes
+3. Removed STR R2 in init (value gets overwritten anyway) - saves 1 byte
+4. Restructured delay loop using BNZ instead of BZ - saves 2 bytes
+   Original: BZ skip, GHI, DEC, BR check (needs separate skip target)
+   New: DEC, GHI, BNZ loop (exits when D=0, no skip needed)
+5. Main loop falls through to delay (no branch needed) - saves 2 bytes
+
+TO ADJUST SPEED:
+Change byte at address 0E:
+  01 = fastest (barely visible counting)
+  5F = medium (original speed)
+  FF = slowest
+  00 = no delay (full speed, display will blur)

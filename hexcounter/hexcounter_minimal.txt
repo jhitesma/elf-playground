@@ -1,0 +1,69 @@
+Hex Counter - Minimal Version (20 bytes)
+========================================
+Most compact version possible: 20 bytes.
+ASSUMES: R3 = 0 after CPU reset (true per 1802 spec, but original
+code explicitly initializes R3 - this version skips that).
+
+ADDR  CODE  INSTRUCTION     DESCRIPTION
+----  ----  -----------     -----------
+; --- INITIALIZATION (6 bytes) ---
+00    90    GHI R0          D = 0 (R0.1 is 0 after reset)
+01    B2    PHI R2          R2.1 = 0
+02    F8    LDI 30
+03    30                    D = 0x30
+04    A2    PLO R2          R2 = 0030 (scratch pointer)
+05    E2    SEX R2          X = 2
+
+; --- MAIN LOOP (5 bytes) ---
+06    83    GLO R3          D = counter (R3 assumed = 0 initially)
+07    52    STR R2          M[0030] = counter
+08    64    OUT 4           Display, R2 -> 0031
+09    22    DEC R2          R2 -> 0030
+0A    13    INC R3          counter++
+
+; --- DELAY (9 bytes) ---
+0B    F8    LDI xx          Load delay value
+0C    5F                    ** DELAY VALUE: change 5F for speed **
+0D    B4    PHI R4          R4.1 = delay
+0E    24    DEC R4          R4--
+0F    94    GHI R4          D = R4.1
+10    3A    BNZ 0E          Loop while D != 0
+11    0E
+12    30    BR 06           Back to main loop
+13    06
+
+; --- HEX DUMP (20 bytes) ---
+90 B2 F8 30 A2 E2 83 52 64 22 13 F8 5F B4 24 94 3A 0E 30 06
+
+; --- BYTE-PER-LINE ---
+90
+B2
+F8
+30
+A2
+E2
+83
+52
+64
+22
+13
+F8
+5F
+B4
+24
+94
+3A
+0E
+30
+06
+
+NOTE: This version saves 2 bytes by not initializing R3.
+Per the CDP1802 datasheet, all registers are cleared on reset.
+If the counter starts at a value other than 00, use the 22-byte
+"efficient" version instead which explicitly initializes R3.
+
+TO ADJUST SPEED:
+Change byte at address 0C:
+  01 = fastest
+  5F = medium (original speed)
+  FF = slowest

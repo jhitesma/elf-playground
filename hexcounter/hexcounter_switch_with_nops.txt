@@ -1,0 +1,84 @@
+Hex Counter with Switch-Controlled Delay (NOPs before INP)
+==========================================================
+Adds timing NOPs before INP 4 in case hardware needs settling time.
+Based on hexcounter_switch_no_preamble.txt.
+
+ADDR  CODE  INSTRUCTION     DESCRIPTION
+----  ----  -----------     -----------
+; --- INITIALIZATION ---
+00    90    GHI R0          D = 0 (after reset)
+01    B2    PHI R2          R2.1 = 0
+02    B3    PHI R3          R3.1 = 0 (counter high)
+03    A3    PLO R3          R3.0 = 0 (R3=0000)
+04    F8    LDI 30
+05    30                    D = 0x30
+06    A2    PLO R2          R2 = 0030 (scratch pointer)
+07    52    STR R2          M[0030] = 0x30
+08    E2    SEX R2          X = 2 (R2 is data pointer)
+
+; --- MAIN LOOP ---
+09    30    BR 14           Branch to delay
+0A    14
+
+; --- COUNTER UPDATE ---
+0B    13    INC R3          Increment counter
+0C    83    GLO R3          D = counter low byte
+0D    52    STR R2          Store for display
+0E    64    OUT 4           Display counter
+0F    22    DEC R2          Fix R2 (OUT incremented it)
+10    C4    NOP
+11    C4    NOP
+12    30    BR 09           Loop back
+13    09
+
+; --- DELAY SUBROUTINE ---
+14    C4    NOP             Hardware settling time
+15    C4    NOP             Hardware settling time
+16    6C    INP 4           Read switches into D
+17    B4    PHI R4          R4.1 = switch value (delay amount)
+18    32    BZ 0B           If D=0, skip delay
+19    0B
+1A    94    GHI R4          D = R4.1
+1B    24    DEC R4          Decrement R4
+1C    30    BR 18           Loop until R4.1 = 0
+1D    18
+
+; --- HEX DUMP (30 bytes) ---
+90 B2 B3 A3 F8 30 A2 52 E2 30 14 13 83 52 64 22 C4 C4 30 09 C4 C4 6C B4 32 0B 94 24 30 18
+
+; --- BYTE-PER-LINE ---
+90
+B2
+B3
+A3
+F8
+30
+A2
+52
+E2
+30
+14
+13
+83
+52
+64
+22
+C4
+C4
+30
+09
+C4
+C4
+6C
+B4
+32
+0B
+94
+24
+30
+18
+
+HYPOTHESIS:
+If this works but hexcounter_switch_no_preamble.txt doesn't, the
+issue is a hardware timing race - INP 4 needs settling time after
+branching to the delay section.

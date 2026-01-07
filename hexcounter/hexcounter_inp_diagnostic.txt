@@ -1,0 +1,81 @@
+Hex Counter INP Diagnostic
+==========================
+Diagnostic version that displays the switch value (from INP 4)
+instead of the counter. Use this to verify INP 4 reads correctly
+within the hex counter's program structure.
+
+If display shows switch values: INP 4 works, delay loop is the issue
+If display shows 00: INP 4 is not reading switches correctly
+
+ADDR  CODE  INSTRUCTION     DESCRIPTION
+----  ----  -----------     -----------
+; --- INITIALIZATION ---
+00    90    GHI R0          D = 0 (after reset)
+01    B2    PHI R2          R2.1 = 0
+02    B3    PHI R3          R3.1 = 0
+03    A3    PLO R3          R3.0 = 0
+04    F8    LDI 30
+05    30                    D = 0x30
+06    A2    PLO R2          R2 = 0030 (scratch pointer)
+07    52    STR R2          M[0030] = 0x30
+08    E2    SEX R2          X = 2
+
+; --- MAIN LOOP ---
+09    30    BR 14           Branch to "delay" (now displays INP)
+0A    14
+
+; --- COUNTER UPDATE (still increments, but displays INP value) ---
+0B    13    INC R3          Increment counter (runs in background)
+0C    83    GLO R3          D = counter low byte (NOT DISPLAYED)
+0D    C4    NOP             (was STR R2)
+0E    C4    NOP             (was OUT 4)
+0F    C4    NOP             (was DEC R2)
+10    C4    NOP
+11    C4    NOP
+12    30    BR 09           Loop back
+13    09
+
+; --- DIAGNOSTIC: Read and display switch value ---
+14    6C    INP 4           Read switches into D and M[R2]
+15    64    OUT 4           Display switch value immediately
+16    22    DEC R2          Fix R2 (OUT incremented it)
+17    30    BR 0B           Go to counter update
+18    0B
+
+; --- HEX DUMP (25 bytes) ---
+90 B2 B3 A3 F8 30 A2 52 E2 30 14 13 83 C4 C4 C4 C4 C4 30 09 6C 64 22 30 0B
+
+; --- BYTE-PER-LINE ---
+90
+B2
+B3
+A3
+F8
+30
+A2
+52
+E2
+30
+14
+13
+83
+C4
+C4
+C4
+C4
+C4
+30
+09
+6C
+64
+22
+30
+0B
+
+EXPECTED BEHAVIOR:
+- Display should show the current switch value (not the counter)
+- FF = all switches up
+- 00 = all switches down
+- Changing switches should change display
+
+This confirms whether INP 4 reads correctly in this program's context.
