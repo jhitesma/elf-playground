@@ -10,6 +10,10 @@ This repository is an experiment in using [Claude](https://claude.ai) to write a
 
 A hex counter that displays 00-FF on the display with adjustable delay. Includes multiple versions from 20-31 bytes, with both fixed and switch-controlled delay options. See the [detailed explanation](hexcounter/hexcounter_explained.md) for a line-by-line walkthrough.
 
+### [Bouncing Ball](bouncing-ball/)
+
+A simple animation that counts 00 → FF → 00 in a continuous "bounce". The Q LED indicates direction (ON = up, OFF = down). 42 bytes with fixed or switch-controlled delay.
+
 ### Future Ideas
 
 See [`plans/program-ideas.md`](plans/program-ideas.md) for planned programs including reaction timer, binary trainer, Simon memory game, and more.

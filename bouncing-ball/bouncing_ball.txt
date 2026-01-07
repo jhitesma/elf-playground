@@ -1,0 +1,123 @@
+Bouncing Ball Demo
+==================
+Counts 00 to FF, then reverses to count back down to 00, and repeats.
+Q LED indicates direction: ON = counting up, OFF = counting down.
+
+ADDR  CODE  INSTRUCTION     DESCRIPTION
+----  ----  -----------     -----------
+; --- INITIALIZATION (9 bytes) ---
+00    90    GHI R0          D = 0 (R0.1 is 0 after reset)
+01    B2    PHI R2          R2.1 = 0
+02    B3    PHI R3          R3.1 = 0
+03    A3    PLO R3          R3.0 = 0 (counter starts at 0)
+04    F8    LDI 30
+05    30                    D = 0x30
+06    A2    PLO R2          R2 = 0030 (scratch pointer)
+07    E2    SEX R2          X = 2
+08    7B    SEQ             Q = 1 (start counting up)
+
+; --- MAIN LOOP: DISPLAY (4 bytes) ---
+09    83    GLO R3          D = counter
+0A    52    STR R2          M[0030] = counter
+0B    64    OUT 4           Display counter
+0C    22    DEC R2          Fix R2 (OUT incremented it)
+
+; --- DELAY (7 bytes) ---
+0D    F8    LDI 5F          ** DELAY VALUE: change for speed **
+0E    5F
+0F    B4    PHI R4          R4.1 = delay
+10    24    DEC R4          R4--
+11    94    GHI R4          D = R4.1
+12    3A    BNZ 10          Loop while D != 0
+13    10
+
+; --- DIRECTION CHECK (2 bytes) ---
+14    31    BQ 1F           If Q=1 (counting up), branch to increment
+15    1F
+
+; --- COUNTING DOWN (6 bytes) ---
+16    23    DEC R3          Decrement counter
+17    83    GLO R3          D = counter
+18    32    BZ 1C           If zero, switch to counting up
+19    1C
+1A    30    BR 09           Loop back to display
+1B    09
+
+; --- SWITCH TO UP (3 bytes) ---
+1C    7B    SEQ             Q = 1
+1D    30    BR 09           Loop back to display
+1E    09
+
+; --- COUNTING UP (8 bytes) ---
+1F    13    INC R3          Increment counter
+20    83    GLO R3          D = counter
+21    FB    XRI FF          XOR with FF (result is 0 if D was FF)
+22    FF
+23    32    BZ 27           If was FF, switch to counting down
+24    27
+25    30    BR 09           Loop back to display
+26    09
+
+; --- SWITCH TO DOWN (3 bytes) ---
+27    7A    REQ             Q = 0
+28    30    BR 09           Loop back to display
+29    09
+
+; --- HEX DUMP (42 bytes) ---
+90 B2 B3 A3 F8 30 A2 E2 7B 83 52 64 22 F8 5F B4 24 94 3A 10 31 1F 23 83 32 1C 30 09 7B 30 09 13 83 FB FF 32 27 30 09 7A 30 09
+
+; --- BYTE-PER-LINE ---
+90
+B2
+B3
+A3
+F8
+30
+A2
+E2
+7B
+83
+52
+64
+22
+F8
+5F
+B4
+24
+94
+3A
+10
+31
+1F
+23
+83
+32
+1C
+30
+09
+7B
+30
+09
+13
+83
+FB
+FF
+32
+27
+30
+09
+7A
+30
+09
+
+EXPECTED BEHAVIOR:
+- Display counts up: 00, 01, 02, ... FE, FF
+- At FF, reverses and counts down: FE, FD, ... 01, 00
+- At 00, reverses and counts up again
+- Q LED is ON when counting up, OFF when counting down
+
+TO ADJUST SPEED:
+Change byte at address 0E:
+  FF = slowest
+  5F = medium (default)
+  01 = fastest
