@@ -1,0 +1,263 @@
+12-Hour Binary Clock with Time Setting
+======================================
+Set time using toggle switches and INPUT button:
+1. Set switches to hour value (01-0C), press INPUT
+2. Set switches to minute value (00-3B), press INPUT
+3. Clock starts running
+
+Display alternates every 2 seconds:
+- Q LED ON: showing hours (01-0C for 1-12)
+- Q LED OFF: showing minutes (00-3B for 0-59)
+
+ADDR  CODE  INSTRUCTION     DESCRIPTION
+----  ----  -----------     -----------
+; === INITIALIZATION (13 bytes) ===
+00    90    GHI R0          D = 0
+01    B2    PHI R2          R2.1 = 0
+02    B3    PHI R3          R3.1 = 0 (seconds)
+03    A3    PLO R3          R3.0 = 0
+04    B5    PHI R5          R5.1 = 0 (toggle)
+05    A5    PLO R5          R5.0 = 0 (minutes)
+06    F8    LDI 30
+07    30
+08    A2    PLO R2          R2 = 0x0030
+09    E2    SEX R2          X = 2
+0A    F8    LDI 0C
+0B    0C
+0C    A6    PLO R6          R6.0 = 12 (default hours)
+
+; === SET HOURS (12 bytes) ===
+0D    7B    SEQ             Q = 1 (indicate hours mode)
+set_hr:
+0E    6C    INP 4           Read switches to D and M[R2]
+0F    64    OUT 4           Display current switch value
+10    22    DEC R2          Fix R2
+11    3C    BN4 15          If INPUT pressed, continue
+12    15
+13    30    BR 0E           Loop, keep reading
+14    0E
+15    A6    PLO R6          Store hours
+; Wait for INPUT release
+16    34    B4 19           If INPUT released, continue
+17    19
+18    30    BR 16           Wait for release
+19    16
+
+; === SET MINUTES (11 bytes) ===
+1A    7A    REQ             Q = 0 (indicate minutes mode)
+set_min:
+1B    6C    INP 4           Read switches
+1C    64    OUT 4           Display
+1D    22    DEC R2          Fix R2
+1E    3C    BN4 22          If INPUT pressed, continue
+1F    22
+20    30    BR 1B           Loop
+21    1B
+22    A5    PLO R5          Store minutes
+; Wait for INPUT release
+23    34    B4 26           If INPUT released, start clock
+24    26
+25    30    BR 23
+26    23
+
+; === START CLOCK ===
+27    7B    SEQ             Q = 1 (start showing hours)
+
+; === MAIN LOOP: DISPLAY (7 bytes) ===
+28    95    GHI R5          D = toggle flag
+29    3A    BNZ 2E          If toggle != 0, show minutes
+2A    2E
+2B    86    GLO R6          D = hours
+2C    30    BR 2F           Skip to display
+2D    2F
+2E    85    GLO R5          D = minutes
+2F    52    STR R2          Store for display
+30    64    OUT 4           Display value
+31    22    DEC R2          Fix R2
+
+; === 1-SECOND DELAY (7 bytes) ===
+32    F8    LDI 51          ** TIMING: adjust for your crystal **
+33    51
+34    B4    PHI R4
+35    24    DEC R4
+36    94    GHI R4
+37    3A    BNZ 35
+38    35
+
+; === INCREMENT SECONDS (8 bytes) ===
+39    93    GHI R3          D = seconds
+3A    FC    ADI 01
+3B    01
+3C    B3    PHI R3
+3D    FF    SMI 3C          D = D - 60
+3E    3C
+3F    3A    BNZ 58          If != 60, check toggle
+40    58
+
+; === SECONDS -> MINUTES (10 bytes) ===
+41    90    GHI R0          D = 0
+42    B3    PHI R3          seconds = 0
+43    85    GLO R5          D = minutes
+44    FC    ADI 01
+45    01
+46    A5    PLO R5
+47    FF    SMI 3C
+48    3C
+49    3A    BNZ 58          If != 60, check toggle
+4A    58
+
+; === MINUTES -> HOURS (13 bytes) ===
+4B    90    GHI R0
+4C    A5    PLO R5          minutes = 0
+4D    86    GLO R6          D = hours
+4E    FC    ADI 01
+4F    01
+50    A6    PLO R6
+51    FF    SMI 0D          D = D - 13
+52    0D
+53    3A    BNZ 58          If != 13, check toggle
+54    58
+
+; === HOURS WRAP: 13 -> 1 (3 bytes) ===
+55    F8    LDI 01
+56    01
+57    A6    PLO R6
+
+; === TOGGLE DISPLAY (16 bytes) ===
+58    93    GHI R3          D = seconds
+59    FA    ANI 01
+5A    01
+5B    32    BZ 63           If even, show hours
+5C    63
+5D    7A    REQ             Q = 0 (minutes)
+5E    F8    LDI 01
+5F    01
+60    B5    PHI R5          toggle = 1
+61    30    BR 28           Back to main
+62    28
+63    7B    SEQ             Q = 1 (hours)
+64    90    GHI R0
+65    B5    PHI R5          toggle = 0
+66    30    BR 28
+67    28
+
+; === HEX DUMP (104 bytes) ===
+90 B2 B3 A3 B5 A5 F8 30 A2 E2 F8 0C A6 7B 6C 64 22 3C 15 30 0E A6 34 19 30 16 7A 6C 64 22 3C 22 30 1B A5 34 26 30 23 7B 95 3A 2E 86 30 2F 85 52 64 22 F8 51 B4 24 94 3A 35 93 FC 01 B3 FF 3C 3A 58 90 B3 85 FC 01 A5 FF 3C 3A 58 90 A5 86 FC 01 A6 FF 0D 3A 58 F8 01 A6 93 FA 01 32 63 7A F8 01 B5 30 28 7B 90 B5 30 28
+
+; === BYTE-PER-LINE ===
+90
+B2
+B3
+A3
+B5
+A5
+F8
+30
+A2
+E2
+F8
+0C
+A6
+7B
+6C
+64
+22
+3C
+15
+30
+0E
+A6
+34
+19
+30
+16
+7A
+6C
+64
+22
+3C
+22
+30
+1B
+A5
+34
+26
+30
+23
+7B
+95
+3A
+2E
+86
+30
+2F
+85
+52
+64
+22
+F8
+51
+B4
+24
+94
+3A
+35
+93
+FC
+01
+B3
+FF
+3C
+3A
+58
+90
+B3
+85
+FC
+01
+A5
+FF
+3C
+3A
+58
+90
+A5
+86
+FC
+01
+A6
+FF
+0D
+3A
+58
+F8
+01
+A6
+93
+FA
+01
+32
+63
+7A
+F8
+01
+B5
+30
+28
+7B
+90
+B5
+30
+28
+
+TIME SETTING:
+1. On startup, Q LED is ON (hours mode)
+2. Set switches to desired hour (01-0C for 1-12)
+3. Display shows your setting in real-time
+4. Press INPUT to confirm hours
+5. Q LED turns OFF (minutes mode)
+6. Set switches to desired minutes (00-3B for 0-59)
+7. Press INPUT to start the clock
+
+NOTE: No input validation - setting hours > 12 or minutes > 59
+will cause unexpected behavior until the clock naturally wraps.

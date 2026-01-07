@@ -1,0 +1,206 @@
+12-Hour Binary Clock
+====================
+Display alternates every 2 seconds:
+- Q LED ON: showing hours (01-0C for 1-12)
+- Q LED OFF: showing minutes (00-3B for 0-59)
+
+Starts at 12:00. For time setting, see clock_12h_set.txt.
+
+Timing calibrated for 1 MHz crystal (8 cycles/machine cycle).
+Delay value 0x51 ≈ 1 second. Adjust if clock runs fast/slow.
+
+ADDR  CODE  INSTRUCTION     DESCRIPTION
+----  ----  -----------     -----------
+; === INITIALIZATION (14 bytes) ===
+00    90    GHI R0          D = 0
+01    B2    PHI R2          R2.1 = 0
+02    B3    PHI R3          R3.1 = 0 (seconds = 0)
+03    A3    PLO R3          R3.0 = 0
+04    B5    PHI R5          R5.1 = 0 (toggle = hours mode)
+05    A5    PLO R5          R5.0 = 0 (minutes = 0)
+06    F8    LDI 0C
+07    0C                    D = 12
+08    A6    PLO R6          R6.0 = 12 (hours = 12)
+09    F8    LDI 30
+0A    30                    D = 0x30
+0B    A2    PLO R2          R2 = 0x0030
+0C    E2    SEX R2          X = 2
+0D    7B    SEQ             Q = 1 (start showing hours)
+
+; === MAIN LOOP: DISPLAY (7 bytes) ===
+0E    95    GHI R5          D = toggle flag
+0F    3A    BNZ 14          If toggle != 0, show minutes
+10    14
+11    86    GLO R6          D = hours
+12    30    BR 15           Skip to display
+13    15
+14    85    GLO R5          D = minutes
+15    52    STR R2          Store for display
+16    64    OUT 4           Display value
+17    22    DEC R2          Fix R2
+
+; === 1-SECOND DELAY (7 bytes) ===
+; At 1 MHz: delay 0x51 ≈ 1 second
+18    F8    LDI 51          ** TIMING: adjust if clock is fast/slow **
+19    51
+1A    B4    PHI R4          R4.1 = delay
+1B    24    DEC R4          [delay loop]
+1C    94    GHI R4          D = R4.1
+1D    3A    BNZ 1B          Loop while D != 0
+1E    1B
+
+; === INCREMENT SECONDS (8 bytes) ===
+1F    93    GHI R3          D = seconds
+20    FC    ADI 01          D = D + 1
+21    01
+22    B3    PHI R3          Store seconds
+23    FF    SMI 3C          D = D - 60
+24    3C
+25    3A    BNZ 3E          If seconds != 60, check toggle
+26    3E
+
+; === SECONDS ROLLOVER -> INCREMENT MINUTES (10 bytes) ===
+27    90    GHI R0          D = 0
+28    B3    PHI R3          Reset seconds to 0
+29    85    GLO R5          D = minutes
+2A    FC    ADI 01          D = D + 1
+2B    01
+2C    A5    PLO R5          Store minutes
+2D    FF    SMI 3C          D = D - 60
+2E    3C
+2F    3A    BNZ 3E          If minutes != 60, check toggle
+30    3E
+
+; === MINUTES ROLLOVER -> INCREMENT HOURS (13 bytes) ===
+31    90    GHI R0          D = 0
+32    A5    PLO R5          Reset minutes to 0
+33    86    GLO R6          D = hours
+34    FC    ADI 01          D = D + 1
+35    01
+36    A6    PLO R6          Store hours
+37    FF    SMI 0D          D = D - 13
+38    0D
+39    3A    BNZ 3E          If hours != 13, check toggle
+3A    3E
+
+; === HOURS ROLLOVER: 13 -> 1 (3 bytes) ===
+3B    F8    LDI 01
+3C    01
+3D    A6    PLO R6          hours = 1
+
+; === TOGGLE DISPLAY EVERY 2 SECONDS (16 bytes) ===
+; Use low bit of seconds: even=hours, odd=minutes
+3E    93    GHI R3          D = seconds
+3F    FA    ANI 01          D = D AND 1
+40    01
+41    32    BZ 49           If even, show hours
+42    49
+43    7A    REQ             Q = 0 (odd: show minutes)
+44    F8    LDI 01
+45    01
+46    B5    PHI R5          toggle = 1 (minutes)
+47    30    BR 0E           Back to main loop
+48    0E
+49    7B    SEQ             Q = 1 (even: show hours)
+4A    90    GHI R0          D = 0
+4B    B5    PHI R5          toggle = 0 (hours)
+4C    30    BR 0E           Back to main loop
+4D    0E
+
+; === HEX DUMP (78 bytes) ===
+90 B2 B3 A3 B5 A5 F8 0C A6 F8 30 A2 E2 7B 95 3A 14 86 30 15 85 52 64 22 F8 51 B4 24 94 3A 1B 93 FC 01 B3 FF 3C 3A 3E 90 B3 85 FC 01 A5 FF 3C 3A 3E 90 A5 86 FC 01 A6 FF 0D 3A 3E F8 01 A6 93 FA 01 32 49 7A F8 01 B5 30 0E 7B 90 B5 30 0E
+
+; === BYTE-PER-LINE ===
+90
+B2
+B3
+A3
+B5
+A5
+F8
+0C
+A6
+F8
+30
+A2
+E2
+7B
+95
+3A
+14
+86
+30
+15
+85
+52
+64
+22
+F8
+51
+B4
+24
+94
+3A
+1B
+93
+FC
+01
+B3
+FF
+3C
+3A
+3E
+90
+B3
+85
+FC
+01
+A5
+FF
+3C
+3A
+3E
+90
+A5
+86
+FC
+01
+A6
+FF
+0D
+3A
+3E
+F8
+01
+A6
+93
+FA
+01
+32
+49
+7A
+F8
+01
+B5
+30
+0E
+7B
+90
+B5
+30
+0E
+
+REGISTERS USED:
+- R2 = 0x0030 (data pointer)
+- R3.0 = unused
+- R3.1 = seconds (0-59)
+- R4 = delay loop counter
+- R5.0 = minutes (0-59)
+- R5.1 = display toggle (0=hours, non-0=minutes)
+- R6.0 = hours (1-12)
+
+TIMING ADJUSTMENT:
+The delay value at address 19 controls clock speed.
+- If clock runs FAST: increase value (try 0x60, 0x70...)
+- If clock runs SLOW: decrease value (try 0x40, 0x30...)
+- 0x51 is calculated for 1 MHz, may need fine-tuning

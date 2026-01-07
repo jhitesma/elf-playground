@@ -1,0 +1,245 @@
+24-Hour Binary Clock with Time Setting
+======================================
+Set time using toggle switches and INPUT button:
+1. Set switches to hour value (00-17), press INPUT
+2. Set switches to minute value (00-3B), press INPUT
+3. Clock starts running
+
+Display alternates every 2 seconds:
+- Q LED ON: showing hours (00-17 for 0-23)
+- Q LED OFF: showing minutes (00-3B for 0-59)
+
+ADDR  CODE  INSTRUCTION     DESCRIPTION
+----  ----  -----------     -----------
+; === INITIALIZATION (11 bytes) ===
+00    90    GHI R0          D = 0
+01    B2    PHI R2          R2.1 = 0
+02    B3    PHI R3          R3.1 = 0 (seconds)
+03    A3    PLO R3          R3.0 = 0
+04    B5    PHI R5          R5.1 = 0 (toggle)
+05    A5    PLO R5          R5.0 = 0 (minutes)
+06    A6    PLO R6          R6.0 = 0 (hours)
+07    F8    LDI 30
+08    30
+09    A2    PLO R2          R2 = 0x0030
+0A    E2    SEX R2          X = 2
+
+; === SET HOURS (12 bytes) ===
+0B    7B    SEQ             Q = 1 (hours mode)
+set_hr:
+0C    6C    INP 4           Read switches
+0D    64    OUT 4           Display
+0E    22    DEC R2          Fix R2
+0F    3C    BN4 13          If INPUT pressed
+10    13
+11    30    BR 0C           Loop
+12    0C
+13    A6    PLO R6          Store hours
+14    34    B4 17           Wait for release
+15    17
+16    30    BR 14
+17    14
+
+; === SET MINUTES (11 bytes) ===
+18    7A    REQ             Q = 0 (minutes mode)
+set_min:
+19    6C    INP 4
+1A    64    OUT 4
+1B    22    DEC R2
+1C    3C    BN4 20
+1D    20
+1E    30    BR 19
+1F    19
+20    A5    PLO R5          Store minutes
+21    34    B4 24           Wait for release
+22    24
+23    30    BR 21
+24    21
+
+; === START CLOCK ===
+25    7B    SEQ             Q = 1 (start showing hours)
+
+; === MAIN LOOP: DISPLAY (7 bytes) ===
+26    95    GHI R5          D = toggle
+27    3A    BNZ 2C          If != 0, show minutes
+28    2C
+29    86    GLO R6          D = hours
+2A    30    BR 2D
+2B    2D
+2C    85    GLO R5          D = minutes
+2D    52    STR R2
+2E    64    OUT 4
+2F    22    DEC R2
+
+; === 1-SECOND DELAY (7 bytes) ===
+30    F8    LDI 51          ** TIMING **
+31    51
+32    B4    PHI R4
+33    24    DEC R4
+34    94    GHI R4
+35    3A    BNZ 33
+36    33
+
+; === INCREMENT SECONDS (8 bytes) ===
+37    93    GHI R3
+38    FC    ADI 01
+39    01
+3A    B3    PHI R3
+3B    FF    SMI 3C
+3C    3C
+3D    3A    BNZ 56          check toggle
+3E    56
+
+; === SECONDS -> MINUTES (10 bytes) ===
+3F    90    GHI R0
+40    B3    PHI R3
+41    85    GLO R5
+42    FC    ADI 01
+43    01
+44    A5    PLO R5
+45    FF    SMI 3C
+46    3C
+47    3A    BNZ 56
+48    56
+
+; === MINUTES -> HOURS (12 bytes) ===
+49    90    GHI R0
+4A    A5    PLO R5
+4B    86    GLO R6
+4C    FC    ADI 01
+4D    01
+4E    A6    PLO R6
+4F    FF    SMI 18          D - 24
+50    18
+51    3A    BNZ 56
+52    56
+
+; === HOURS WRAP: 24 -> 0 (2 bytes) ===
+53    90    GHI R0
+54    A6    PLO R6
+55    C4    NOP
+
+; === TOGGLE DISPLAY (16 bytes) ===
+56    93    GHI R3
+57    FA    ANI 01
+58    01
+59    32    BZ 61
+5A    61
+5B    7A    REQ
+5C    F8    LDI 01
+5D    01
+5E    B5    PHI R5
+5F    30    BR 26
+60    26
+61    7B    SEQ
+62    90    GHI R0
+63    B5    PHI R5
+64    30    BR 26
+65    26
+
+; === HEX DUMP (102 bytes) ===
+90 B2 B3 A3 B5 A5 A6 F8 30 A2 E2 7B 6C 64 22 3C 13 30 0C A6 34 17 30 14 7A 6C 64 22 3C 20 30 19 A5 34 24 30 21 7B 95 3A 2C 86 30 2D 85 52 64 22 F8 51 B4 24 94 3A 33 93 FC 01 B3 FF 3C 3A 56 90 B3 85 FC 01 A5 FF 3C 3A 56 90 A5 86 FC 01 A6 FF 18 3A 56 90 A6 C4 93 FA 01 32 61 7A F8 01 B5 30 26 7B 90 B5 30 26
+
+; === BYTE-PER-LINE ===
+90
+B2
+B3
+A3
+B5
+A5
+A6
+F8
+30
+A2
+E2
+7B
+6C
+64
+22
+3C
+13
+30
+0C
+A6
+34
+17
+30
+14
+7A
+6C
+64
+22
+3C
+20
+30
+19
+A5
+34
+24
+30
+21
+7B
+95
+3A
+2C
+86
+30
+2D
+85
+52
+64
+22
+F8
+51
+B4
+24
+94
+3A
+33
+93
+FC
+01
+B3
+FF
+3C
+3A
+56
+90
+B3
+85
+FC
+01
+A5
+FF
+3C
+3A
+56
+90
+A5
+86
+FC
+01
+A6
+FF
+18
+3A
+56
+90
+A6
+C4
+93
+FA
+01
+32
+61
+7A
+F8
+01
+B5
+30
+26
+7B
+90
+B5
+30
+26

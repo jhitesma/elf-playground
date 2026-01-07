@@ -1,0 +1,189 @@
+24-Hour Binary Clock
+====================
+Display alternates every 2 seconds:
+- Q LED ON: showing hours (00-17 for 0-23)
+- Q LED OFF: showing minutes (00-3B for 0-59)
+
+Starts at 00:00. For time setting, see clock_24h_set.txt.
+
+Timing calibrated for 1 MHz crystal (8 cycles/machine cycle).
+
+ADDR  CODE  INSTRUCTION     DESCRIPTION
+----  ----  -----------     -----------
+; === INITIALIZATION (13 bytes) ===
+00    90    GHI R0          D = 0
+01    B2    PHI R2          R2.1 = 0
+02    B3    PHI R3          R3.1 = 0 (seconds)
+03    A3    PLO R3          R3.0 = 0
+04    B5    PHI R5          R5.1 = 0 (toggle)
+05    A5    PLO R5          R5.0 = 0 (minutes)
+06    A6    PLO R6          R6.0 = 0 (hours = 0)
+07    F8    LDI 30
+08    30
+09    A2    PLO R2          R2 = 0x0030
+0A    E2    SEX R2          X = 2
+0B    7B    SEQ             Q = 1 (start showing hours)
+
+; === MAIN LOOP: DISPLAY (7 bytes) ===
+0C    95    GHI R5          D = toggle flag
+0D    3A    BNZ 12          If toggle != 0, show minutes
+0E    12
+0F    86    GLO R6          D = hours
+10    30    BR 13           Skip to display
+11    13
+12    85    GLO R5          D = minutes
+13    52    STR R2          Store for display
+14    64    OUT 4           Display value
+15    22    DEC R2          Fix R2
+
+; === 1-SECOND DELAY (7 bytes) ===
+16    F8    LDI 51          ** TIMING: adjust for your crystal **
+17    51
+18    B4    PHI R4
+19    24    DEC R4
+1A    94    GHI R4
+1B    3A    BNZ 19
+1C    19
+
+; === INCREMENT SECONDS (8 bytes) ===
+1D    93    GHI R3          D = seconds
+1E    FC    ADI 01
+1F    01
+20    B3    PHI R3
+21    FF    SMI 3C          D = D - 60
+22    3C
+23    3A    BNZ 3C          If != 60, check toggle
+24    3C
+
+; === SECONDS -> MINUTES (10 bytes) ===
+25    90    GHI R0
+26    B3    PHI R3          seconds = 0
+27    85    GLO R5          D = minutes
+28    FC    ADI 01
+29    01
+2A    A5    PLO R5
+2B    FF    SMI 3C
+2C    3C
+2D    3A    BNZ 3C          If != 60, check toggle
+2E    3C
+
+; === MINUTES -> HOURS (13 bytes) ===
+2F    90    GHI R0
+30    A5    PLO R5          minutes = 0
+31    86    GLO R6          D = hours
+32    FC    ADI 01
+33    01
+34    A6    PLO R6
+35    FF    SMI 18          D = D - 24 (0x18)
+36    18
+37    3A    BNZ 3C          If != 24, check toggle
+38    3C
+
+; === HOURS WRAP: 24 -> 0 (2 bytes) ===
+39    90    GHI R0
+3A    A6    PLO R6          hours = 0
+3B    C4    NOP             (padding to keep addresses aligned)
+
+; === TOGGLE DISPLAY (16 bytes) ===
+3C    93    GHI R3          D = seconds
+3D    FA    ANI 01
+3E    01
+3F    32    BZ 47           If even, show hours
+40    47
+41    7A    REQ             Q = 0 (minutes)
+42    F8    LDI 01
+43    01
+44    B5    PHI R5          toggle = 1
+45    30    BR 0C           Back to main
+46    0C
+47    7B    SEQ             Q = 1 (hours)
+48    90    GHI R0
+49    B5    PHI R5          toggle = 0
+4A    30    BR 0C
+4B    0C
+
+; === HEX DUMP (76 bytes) ===
+90 B2 B3 A3 B5 A5 A6 F8 30 A2 E2 7B 95 3A 12 86 30 13 85 52 64 22 F8 51 B4 24 94 3A 19 93 FC 01 B3 FF 3C 3A 3C 90 B3 85 FC 01 A5 FF 3C 3A 3C 90 A5 86 FC 01 A6 FF 18 3A 3C 90 A6 C4 93 FA 01 32 47 7A F8 01 B5 30 0C 7B 90 B5 30 0C
+
+; === BYTE-PER-LINE ===
+90
+B2
+B3
+A3
+B5
+A5
+A6
+F8
+30
+A2
+E2
+7B
+95
+3A
+12
+86
+30
+13
+85
+52
+64
+22
+F8
+51
+B4
+24
+94
+3A
+19
+93
+FC
+01
+B3
+FF
+3C
+3A
+3C
+90
+B3
+85
+FC
+01
+A5
+FF
+3C
+3A
+3C
+90
+A5
+86
+FC
+01
+A6
+FF
+18
+3A
+3C
+90
+A6
+C4
+93
+FA
+01
+32
+47
+7A
+F8
+01
+B5
+30
+0C
+7B
+90
+B5
+30
+0C
+
+DIFFERENCES FROM 12-HOUR VERSION:
+- Hours range: 00-17 (0-23) instead of 01-0C (1-12)
+- Hours wrap: 24 -> 0 instead of 13 -> 1
+- Starts at 00:00 instead of 12:00

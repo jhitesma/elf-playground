@@ -12,7 +12,11 @@ A hex counter that displays 00-FF on the display with adjustable delay. Includes
 
 ### [Bouncing Ball](bouncing-ball/)
 
-A simple animation that counts 00 → FF → 00 in a continuous "bounce". The Q LED indicates direction (ON = up, OFF = down). 42 bytes with fixed or switch-controlled delay.
+A simple animation that counts 00 → FF → 00 in a continuous "bounce". The Q LED indicates direction (ON = up, OFF = down). 41-42 bytes with fixed or switch-controlled delay.
+
+### [Binary Clock](binary-clock/)
+
+A real-time clock displaying hours and minutes. Display alternates every 2 seconds (Q LED ON = hours, OFF = minutes). Available in 12-hour and 24-hour formats, with optional time-setting via switches. 76-104 bytes. Calibrated for 1 MHz crystal.
 
 ### Future Ideas
 
