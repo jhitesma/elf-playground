@@ -7,8 +7,9 @@ A hex counter program that displays values 00-FF on the two-digit hex display wi
 | File | Size | Description |
 |------|------|-------------|
 | `hexcounter.txt` | 31 bytes | Original with fixed delay (0x5F) |
-| `hexcounter_switch_delay.txt` | 31 bytes | Switch-controlled delay |
+| `hexcounter_switch_delay.txt` | 31 bytes | Switch-controlled delay (PE ELF) |
 | `hexcounter_switch_delay_short.txt` | 30 bytes | Switch-controlled, optimized |
+| `hexcounter_keypad_delay.txt` | 38 bytes | Keypad-controlled delay (AVI ELF II) |
 | `hexcounter_no_preamble.txt` | 29 bytes | Fixed delay, preamble removed |
 | `hexcounter_switch_no_preamble.txt` | 28 bytes | Switch-controlled, no preamble |
 | `hexcounter_efficient.txt` | 22 bytes | Optimized with restructured delay loop |
@@ -33,6 +34,30 @@ To control speed with the toggle switches, use `hexcounter_switch_delay.txt`:
 ```
 
 Set switches to FF for slowest counting, 01 for fastest.
+
+## AVI ELF II Keypad Version
+
+For the AVI ELF II with hex keypad, use `hexcounter_keypad_delay.txt`:
+
+```
+64 00 90 B2 B3 A3 F8 30 A2 52 E2 F8 80 B4 3C 22 94 B5 32 1A 95 25 32 1A 30 14 13 83 52 64 22 C4 30 0E 6C B4 30 10
+```
+
+**How to use:**
+1. Load and run - counter starts at medium speed (0x80 delay)
+2. Press two hex keys to set new delay (e.g., "F" then "F" for 0xFF)
+3. Press **IN button** to apply the new delay
+4. Repeat steps 2-3 anytime to change speed
+
+**Delay examples:**
+| Keys | Value | Speed |
+|------|-------|-------|
+| F, F | 0xFF | Slowest |
+| 8, 0 | 0x80 | Medium |
+| 1, 0 | 0x10 | Fast |
+| 0, 1 | 0x01 | Fastest |
+
+The keypad uses a rolling buffer (74C923 + 74C173): each keypress shifts the previous key to the high nibble and puts the new key in the low nibble.
 
 ## Diagnostic Files
 

@@ -1,0 +1,127 @@
+Hex Counter with Keypad-Controlled Delay (AVI ELF II)
+======================================================
+Version for AVI ELF II with hex keypad input.
+Press two hex keys to set delay, then press IN button to apply.
+
+HARDWARE:
+- 74C923 20-key encoder + 74C173 flip-flop for keypad
+- INP 4 reads keypad buffer (two hex digits)
+- OUT 4 writes to TIL311 display
+- EF4 = IN button status (0=pressed, 1=not pressed)
+- BN4 (3C) = Branch if IN button pressed
+
+HOW TO USE:
+1. Load and run the program - counter starts at medium speed (0x80)
+2. Press two hex keys to set new delay:
+   - "F" then "F" = 0xFF (slowest)
+   - "8" then "0" = 0x80 (medium)
+   - "1" then "0" = 0x10 (fast)
+   - "0" then "1" = 0x01 (fastest)
+3. Press IN button to apply the new delay
+4. Repeat steps 2-3 anytime to change speed
+
+NOTE: The keypad is a rolling buffer. Each keypress shifts:
+      Previous key -> High nibble (D4-D7)
+      New key -> Low nibble (D0-D3)
+
+ADDR  CODE  INSTRUCTION     DESCRIPTION
+----  ----  -----------     -----------
+00    64    OUT 4           Output D to hex display
+01    00    IDL             Idle (wait for RUN)
+
+; --- INITIALIZATION ---
+02    90    GHI R0          D = 0 (after reset)
+03    B2    PHI R2          R2.1 = 0
+04    B3    PHI R3          R3.1 = 0 (counter high)
+05    A3    PLO R3          R3.0 = 0 (counter=0000)
+06    F8    LDI 30
+07    30                    D = 0x30
+08    A2    PLO R2          R2 = 0030 (scratch RAM)
+09    52    STR R2          M[0030] = 0x30
+0A    E2    SEX R2          X = 2 (data pointer)
+0B    F8    LDI 80
+0C    80                    D = 0x80 (default delay)
+0D    B4    PHI R4          R4.1 = 0x80
+
+; --- MAIN LOOP ---
+0E    3C    BN4 22          If IN pressed, read new delay
+0F    22
+
+; --- DELAY SUBROUTINE ---
+10    94    GHI R4          D = current delay value
+11    B5    PHI R5          Copy to R5.1 for countdown
+12    32    BZ 1A           If delay=0, skip to counter
+13    1A
+14    95    GHI R5          D = R5.1
+15    25    DEC R5          Decrement R5
+16    32    BZ 1A           If zero, exit delay
+17    1A
+18    30    BR 14           Loop
+19    14
+
+; --- COUNTER UPDATE ---
+1A    13    INC R3          Increment counter
+1B    83    GLO R3          D = counter low byte
+1C    52    STR R2          Store for display
+1D    64    OUT 4           Display counter
+1E    22    DEC R2          Fix R2 (OUT incremented it)
+1F    C4    NOP
+20    30    BR 0E           Loop back to main
+21    0E
+
+; --- READ NEW DELAY FROM KEYPAD ---
+22    6C    INP 4           Read keypad buffer -> D
+23    B4    PHI R4          Store as new delay
+24    30    BR 10           Continue to delay loop
+25    10
+
+; --- HEX DUMP (38 bytes) ---
+64 00 90 B2 B3 A3 F8 30 A2 52 E2 F8 80 B4 3C 22 94 B5 32 1A 95 25 32 1A 30 14 13 83 52 64 22 C4 30 0E 6C B4 30 10
+
+; --- BYTE-PER-LINE (for manual entry) ---
+64
+00
+90
+B2
+B3
+A3
+F8
+30
+A2
+52
+E2
+F8
+80
+B4
+3C
+22
+94
+B5
+32
+1A
+95
+25
+32
+1A
+30
+14
+13
+83
+52
+64
+22
+C4
+30
+0E
+6C
+B4
+30
+10
+
+; --- REGISTER USAGE ---
+; R0 = Program counter (set by hardware after reset)
+; R2 = Data pointer for display (0030)
+; R3 = Counter value (0000-FFFF, displays low byte)
+; R4.1 = Delay value (user-settable via keypad)
+; R5.1 = Delay countdown (working copy of R4.1)
+; X = 2 (points to R2 for INP/OUT)
