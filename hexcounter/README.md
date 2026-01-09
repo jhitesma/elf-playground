@@ -9,7 +9,7 @@ A hex counter program that displays values 00-FF on the two-digit hex display wi
 | `hexcounter.txt` | 31 bytes | Original with fixed delay (0x5F) |
 | `hexcounter_switch_delay.txt` | 31 bytes | Switch-controlled delay (PE ELF) |
 | `hexcounter_switch_delay_short.txt` | 30 bytes | Switch-controlled, optimized |
-| `hexcounter_keypad_delay.txt` | 38 bytes | Keypad-controlled delay (AVI ELF II) |
+| `hexcounter_keypad_delay.txt` | 54 bytes | Keypad-controlled delay (AVI ELF II) |
 | `hexcounter_no_preamble.txt` | 29 bytes | Fixed delay, preamble removed |
 | `hexcounter_switch_no_preamble.txt` | 28 bytes | Switch-controlled, no preamble |
 | `hexcounter_efficient.txt` | 22 bytes | Optimized with restructured delay loop |
@@ -40,8 +40,13 @@ Set switches to FF for slowest counting, 01 for fastest.
 For the AVI ELF II with hex keypad, use `hexcounter_keypad_delay.txt`:
 
 ```
-64 00 90 B2 B3 A3 F8 30 A2 52 E2 F8 80 B4 3C 22 94 B5 32 1A 95 25 32 1A 30 14 13 83 52 64 22 C4 30 0E 6C B4 30 10
+64 00 90 B2 B3 A3 B6 F8 30 A2 52 E2 F8 80 B4 3C 23 94 B5 32 1B 95 25 32 1B 30 15 13 83 52 64 22 C4 30 0F 6C 22 B7 96 52 97 F3 32 31 97 B6 30 11 C4 97 B4 B6 30 11
 ```
+
+**How it works:**
+The program detects the IN button by comparing keypad values:
+- Hex keypress changes the buffer → stored as "pending" (not applied yet)
+- IN button doesn't change buffer → value is applied to delay
 
 **How to use:**
 1. Load and run - counter starts at medium speed (0x80 delay)

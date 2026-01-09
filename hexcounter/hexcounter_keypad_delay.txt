@@ -7,8 +7,13 @@ HARDWARE:
 - 74C923 20-key encoder + 74C173 flip-flop for keypad
 - INP 4 reads keypad buffer (two hex digits)
 - OUT 4 writes to TIL311 display
-- EF4 = IN button status (0=pressed, 1=not pressed)
-- BN4 (3C) = Branch if IN button pressed
+- EF4 triggered by keypress OR IN button
+- BN4 (3C) = Branch if EF4=0 (key or IN pressed)
+
+HOW IT WORKS:
+The program detects IN button by comparing keypad values:
+- Hex keypress: Changes keypad buffer -> store as "pending"
+- IN button: Buffer unchanged -> apply pending value to delay
 
 HOW TO USE:
 1. Load and run the program - counter starts at medium speed (0x80)
@@ -34,49 +39,67 @@ ADDR  CODE  INSTRUCTION     DESCRIPTION
 03    B2    PHI R2          R2.1 = 0
 04    B3    PHI R3          R3.1 = 0 (counter high)
 05    A3    PLO R3          R3.0 = 0 (counter=0000)
-06    F8    LDI 30
-07    30                    D = 0x30
-08    A2    PLO R2          R2 = 0030 (scratch RAM)
-09    52    STR R2          M[0030] = 0x30
-0A    E2    SEX R2          X = 2 (data pointer)
-0B    F8    LDI 80
-0C    80                    D = 0x80 (default delay)
-0D    B4    PHI R4          R4.1 = 0x80
+06    B6    PHI R6          R6.1 = 0 (pending value init)
+07    F8    LDI 30
+08    30                    D = 0x30
+09    A2    PLO R2          R2 = 0030 (scratch RAM)
+0A    52    STR R2          M[0030] = 0x30
+0B    E2    SEX R2          X = 2 (data pointer)
+0C    F8    LDI 80
+0D    80                    D = 0x80 (default delay)
+0E    B4    PHI R4          R4.1 = 0x80
 
 ; --- MAIN LOOP ---
-0E    3C    BN4 22          If IN pressed, read new delay
-0F    22
+0F    3C    BN4 23          If EF4=0 (key/IN pressed), handle input
+10    23
 
 ; --- DELAY SUBROUTINE ---
-10    94    GHI R4          D = current delay value
-11    B5    PHI R5          Copy to R5.1 for countdown
-12    32    BZ 1A           If delay=0, skip to counter
-13    1A
-14    95    GHI R5          D = R5.1
-15    25    DEC R5          Decrement R5
-16    32    BZ 1A           If zero, exit delay
-17    1A
-18    30    BR 14           Loop
-19    14
+11    94    GHI R4          D = current delay value
+12    B5    PHI R5          Copy to R5.1 for countdown
+13    32    BZ 1B           If delay=0, skip to counter
+14    1B
+15    95    GHI R5          D = R5.1
+16    25    DEC R5          Decrement R5
+17    32    BZ 1B           If zero, exit delay
+18    1B
+19    30    BR 15           Loop
+1A    15
 
 ; --- COUNTER UPDATE ---
-1A    13    INC R3          Increment counter
-1B    83    GLO R3          D = counter low byte
-1C    52    STR R2          Store for display
-1D    64    OUT 4           Display counter
-1E    22    DEC R2          Fix R2 (OUT incremented it)
-1F    C4    NOP
-20    30    BR 0E           Loop back to main
-21    0E
+1B    13    INC R3          Increment counter
+1C    83    GLO R3          D = counter low byte
+1D    52    STR R2          Store for display
+1E    64    OUT 4           Display counter
+1F    22    DEC R2          Fix R2 (OUT incremented it)
+20    C4    NOP
+21    30    BR 0F           Loop back to main
+22    0F
 
-; --- READ NEW DELAY FROM KEYPAD ---
-22    6C    INP 4           Read keypad buffer -> D
-23    B4    PHI R4          Store as new delay
-24    30    BR 10           Continue to delay loop
-25    10
+; --- HANDLE KEYPAD/IN INPUT ---
+23    6C    INP 4           D = keypad buffer, M[R2]++
+24    22    DEC R2          Fix R2
+25    B7    PHI R7          R7.1 = new keypad value
+26    96    GHI R6          D = old pending value
+27    52    STR R2          M[0030] = old pending (temp)
+28    97    GHI R7          D = new value
+29    F3    XOR             D = new XOR old (0 if equal)
+2A    32    BZ 31           If equal -> IN pressed, apply!
+2B    31
+2C    97    GHI R7          D = new value (different)
+2D    B6    PHI R6          Update pending, don't apply
+2E    30    BR 11           Continue to delay
+2F    11
 
-; --- HEX DUMP (38 bytes) ---
-64 00 90 B2 B3 A3 F8 30 A2 52 E2 F8 80 B4 3C 22 94 B5 32 1A 95 25 32 1A 30 14 13 83 52 64 22 C4 30 0E 6C B4 30 10
+; --- APPLY DELAY (IN button was pressed) ---
+30    C4    NOP             (padding for alignment)
+31    97    GHI R7          D = value to apply
+32    B4    PHI R4          Apply to delay register!
+33    B6    PHI R6          Update pending
+34    30    BR 11           Continue to delay
+35    11
+
+; --- HEX DUMP (54 bytes) ---
+64 00 90 B2 B3 A3 B6 F8 30 A2 52 E2 F8 80 B4 3C 23 94 B5 32 1B 95 25 32 1B 30 15 13 83 52 64 22 C4 30 0F 6C 22 B7 96 52 97 F3 32 31 97 B6 30 11 C4 97 B4 B6 30 11
 
 ; --- BYTE-PER-LINE (for manual entry) ---
 64
@@ -85,6 +108,7 @@ ADDR  CODE  INSTRUCTION     DESCRIPTION
 B2
 B3
 A3
+B6
 F8
 30
 A2
@@ -94,17 +118,17 @@ F8
 80
 B4
 3C
-22
+23
 94
 B5
 32
-1A
+1B
 95
 25
 32
-1A
+1B
 30
-14
+15
 13
 83
 52
@@ -112,16 +136,33 @@ B5
 22
 C4
 30
-0E
+0F
 6C
-B4
+22
+B7
+96
+52
+97
+F3
+32
+31
+97
+B6
 30
-10
+11
+C4
+97
+B4
+B6
+30
+11
 
 ; --- REGISTER USAGE ---
 ; R0 = Program counter (set by hardware after reset)
 ; R2 = Data pointer for display (0030)
 ; R3 = Counter value (0000-FFFF, displays low byte)
-; R4.1 = Delay value (user-settable via keypad)
-; R5.1 = Delay countdown (working copy of R4.1)
+; R4.1 = Active delay value
+; R5.1 = Delay countdown (working copy)
+; R6.1 = Pending keypad value (waiting for IN confirmation)
+; R7.1 = Temporary storage for new keypad read
 ; X = 2 (points to R2 for INP/OUT)
